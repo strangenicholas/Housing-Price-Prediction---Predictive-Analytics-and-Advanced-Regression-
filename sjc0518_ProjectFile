@@ -1,1 +1,456 @@
+Predictive Analytics and Advanced Regression to Predict Home Values
+Which features of a home have the greatest positive impact on the home values?
+Which features of a home have the greatest negative impact on the home values?
+Which features could be discarded, saving on building costs?
+How much percentage resale value would an additional unit add to your home? 1 sqft, 1 room , …
+What feature formula predicts housing prices most accurately?
+https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/overview
+
+Import Modules/Packages
+[1]
+import sklearn
+print('The scikit-learn version is {}.'.format(sklearn.__version__))
+import pandas as pd
+print('The pandas version is {}'.format(pd.__version__))
+import matplotlib
+import matplotlib.pyplot as plt
+print('The matplotlib version is {}'.format(matplotlib.__version__))
+import numpy as np
+print('The numpy version is {}'.format(np.__version__))
+import seaborn as sns
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
+The scikit-learn version is 1.0.2.
+The pandas version is 1.4.4
+The matplotlib version is 3.5.2
+The numpy version is 1.21.5
+
+[2]
+df_house_train = pd.read_csv(r"C:\Users\jchin\Documents\train.csv", low_memory=False)
+df_house_test = pd.read_csv(r"C:\Users\jchin\Documents\test.csv", low_memory=False)
+
+# drop columns with all NaN values
+df_house_train.dropna(axis=1, how='all')
+df_house_test.dropna(axis=1, how='all')
+
+# limit to only residential properties 
+residential = ["FV", "RH", "RL", "RP", "RM"]
+df_house_train = df_house_train[df_house_train['MSZoning'].isin(residential)] 
+df_house_test = df_house_test[df_house_test['MSZoning'].isin(residential)] 
+print ("Train Data Shape: ", df_house_train.shape)
+print ("Test Data Shape: ", df_house_test.shape)
+Train Data Shape:  (1450, 81)
+Test Data Shape:  (1440, 80)
+
+Import Data (Train and Test)
+[3]
+df_house_train.head()
+
+Train Data Sample
+Column Data Types
+[4]
+print(df_house_train.dtypes)
+Id                 int64
+MSSubClass         int64
+MSZoning          object
+LotFrontage      float64
+LotArea            int64
+                  ...   
+MoSold             int64
+YrSold             int64
+SaleType          object
+SaleCondition     object
+SalePrice          int64
+Length: 81, dtype: object
+
+Data Summary & Findings
+Data Statistical Summary
+[5]
+df_house_train.describe()
+
+Data Information
+[6]
+df_house_train.info()
+<class 'pandas.core.frame.DataFrame'>
+Int64Index: 1450 entries, 0 to 1459
+Data columns (total 81 columns):
+ #   Column         Non-Null Count  Dtype  
+---  ------         --------------  -----  
+ 0   Id             1450 non-null   int64  
+ 1   MSSubClass     1450 non-null   int64  
+ 2   MSZoning       1450 non-null   object 
+ 3   LotFrontage    1191 non-null   float64
+ 4   LotArea        1450 non-null   int64  
+ 5   Street         1450 non-null   object 
+ 6   Alley          89 non-null     object 
+ 7   LotShape       1450 non-null   object 
+ 8   LandContour    1450 non-null   object 
+ 9   Utilities      1450 non-null   object 
+ 10  LotConfig      1450 non-null   object 
+ 11  LandSlope      1450 non-null   object 
+ 12  Neighborhood   1450 non-null   object 
+ 13  Condition1     1450 non-null   object 
+ 14  Condition2     1450 non-null   object 
+ 15  BldgType       1450 non-null   object 
+ 16  HouseStyle     1450 non-null   object 
+ 17  OverallQual    1450 non-null   int64  
+ 18  OverallCond    1450 non-null   int64  
+ 19  YearBuilt      1450 non-null   int64  
+ 20  YearRemodAdd   1450 non-null   int64  
+ 21  RoofStyle      1450 non-null   object 
+ 22  RoofMatl       1450 non-null   object 
+ 23  Exterior1st    1450 non-null   object 
+ 24  Exterior2nd    1450 non-null   object 
+ 25  MasVnrType     1442 non-null   object 
+ 26  MasVnrArea     1442 non-null   float64
+ 27  ExterQual      1450 non-null   object 
+ 28  ExterCond      1450 non-null   object 
+ 29  Foundation     1450 non-null   object 
+ 30  BsmtQual       1413 non-null   object 
+ 31  BsmtCond       1413 non-null   object 
+ 32  BsmtExposure   1412 non-null   object 
+ 33  BsmtFinType1   1413 non-null   object 
+ 34  BsmtFinSF1     1450 non-null   int64  
+ 35  BsmtFinType2   1412 non-null   object 
+ 36  BsmtFinSF2     1450 non-null   int64  
+ 37  BsmtUnfSF      1450 non-null   int64  
+ 38  TotalBsmtSF    1450 non-null   int64  
+ 39  Heating        1450 non-null   object 
+ 40  HeatingQC      1450 non-null   object 
+ 41  CentralAir     1450 non-null   object 
+ 42  Electrical     1449 non-null   object 
+ 43  1stFlrSF       1450 non-null   int64  
+ 44  2ndFlrSF       1450 non-null   int64  
+ 45  LowQualFinSF   1450 non-null   int64  
+ 46  GrLivArea      1450 non-null   int64  
+ 47  BsmtFullBath   1450 non-null   int64  
+ 48  BsmtHalfBath   1450 non-null   int64  
+ 49  FullBath       1450 non-null   int64  
+ 50  HalfBath       1450 non-null   int64  
+ 51  BedroomAbvGr   1450 non-null   int64  
+ 52  KitchenAbvGr   1450 non-null   int64  
+ 53  KitchenQual    1450 non-null   object 
+ 54  TotRmsAbvGrd   1450 non-null   int64  
+ 55  Functional     1450 non-null   object 
+ 56  Fireplaces     1450 non-null   int64  
+ 57  FireplaceQu    769 non-null    object 
+ 58  GarageType     1371 non-null   object 
+ 59  GarageYrBlt    1371 non-null   float64
+ 60  GarageFinish   1371 non-null   object 
+ 61  GarageCars     1450 non-null   int64  
+ 62  GarageArea     1450 non-null   int64  
+ 63  GarageQual     1371 non-null   object 
+ 64  GarageCond     1371 non-null   object 
+ 65  PavedDrive     1450 non-null   object 
+ 66  WoodDeckSF     1450 non-null   int64  
+ 67  OpenPorchSF    1450 non-null   int64  
+ 68  EnclosedPorch  1450 non-null   int64  
+ 69  3SsnPorch      1450 non-null   int64  
+ 70  ScreenPorch    1450 non-null   int64  
+ 71  PoolArea       1450 non-null   int64  
+ 72  PoolQC         7 non-null      object 
+ 73  Fence          278 non-null    object 
+ 74  MiscFeature    52 non-null     object 
+ 75  MiscVal        1450 non-null   int64  
+ 76  MoSold         1450 non-null   int64  
+ 77  YrSold         1450 non-null   int64  
+ 78  SaleType       1450 non-null   object 
+ 79  SaleCondition  1450 non-null   object 
+ 80  SalePrice      1450 non-null   int64  
+dtypes: float64(3), int64(35), object(43)
+memory usage: 928.9+ KB
+
+Missing Data
+[7]
+print(df_house_train.select_dtypes(object).isna().sum())
+print("Total number of missing values:",df_house_train.isna().sum().sum())
+MSZoning            0
+Street              0
+Alley            1361
+LotShape            0
+LandContour         0
+Utilities           0
+LotConfig           0
+LandSlope           0
+Neighborhood        0
+Condition1          0
+Condition2          0
+BldgType            0
+HouseStyle          0
+RoofStyle           0
+RoofMatl            0
+Exterior1st         0
+Exterior2nd         0
+MasVnrType          8
+ExterQual           0
+ExterCond           0
+Foundation          0
+BsmtQual           37
+BsmtCond           37
+BsmtExposure       38
+BsmtFinType1       37
+BsmtFinType2       38
+Heating             0
+HeatingQC           0
+CentralAir          0
+Electrical          1
+KitchenQual         0
+Functional          0
+FireplaceQu       681
+GarageType         79
+GarageFinish       79
+GarageQual         79
+GarageCond         79
+PavedDrive          0
+PoolQC           1443
+Fence            1172
+MiscFeature      1398
+SaleType            0
+SaleCondition       0
+dtype: int64
+Total number of missing values: 6913
+
+Correlation by feature
+[8]
+# Pairwise Pearson correlations
+price_correlations = df_house_train.corrwith(df_house_train['SalePrice'])
+print(price_correlations)
+Id              -0.024353
+MSSubClass      -0.087487
+LotFrontage      0.354848
+LotArea          0.264715
+OverallQual      0.789031
+OverallCond     -0.089084
+YearBuilt        0.517602
+YearRemodAdd     0.501186
+MasVnrArea       0.475950
+BsmtFinSF1       0.384475
+BsmtFinSF2      -0.014145
+BsmtUnfSF        0.216152
+TotalBsmtSF      0.612088
+1stFlrSF         0.603300
+2ndFlrSF         0.319774
+LowQualFinSF    -0.018755
+GrLivArea        0.708658
+BsmtFullBath     0.224054
+BsmtHalfBath    -0.017561
+FullBath         0.556674
+HalfBath         0.280882
+BedroomAbvGr     0.162008
+KitchenAbvGr    -0.137825
+TotRmsAbvGrd     0.533355
+Fireplaces       0.463264
+GarageYrBlt      0.486058
+GarageCars       0.642135
+GarageArea       0.629831
+WoodDeckSF       0.320770
+OpenPorchSF      0.329491
+EnclosedPorch   -0.120765
+3SsnPorch        0.043807
+ScreenPorch      0.110540
+PoolArea         0.092396
+MiscVal         -0.021052
+MoSold           0.051987
+YrSold          -0.025391
+SalePrice        1.000000
+dtype: float64
+
+[9]
+correlation = df_house_train.corr()
+top_11_corr = correlation.nlargest(11, 'SalePrice')['SalePrice'].index
+cm = np.corrcoef(df_house_train[top_11_corr].values.T)
+correlation_hm = sns.heatmap(cm, annot=True, fmt='.2f', annot_kws={'size': 10}, yticklabels=top_10_corr.values, xticklabels=top_10_corr.values)
+---------------------------------------------------------------------------
+NameError Traceback (most recent call last)
+~\AppData\Local\Temp\ipykernel_39312\2524815355.py in <module> 2 top_11_corr = correlation.nlargest(11, 'SalePrice')['SalePrice'].index 3 cm = np.corrcoef(df_house_train[top_11_corr].values.T) ----> 4 correlation_hm = sns.heatmap(cm, annot=True, fmt='.2f', annot_kws={'size': 10}, yticklabels=top_10_corr.values, xticklabels=top_10_corr.values)
+NameError: name 'top_10_corr' is not defined
+Building Type
+[10]
+df_house_train['BldgType'].value_counts().head(10).plot(kind='bar', color='b')
+plt.title('BldgType');
+
+Sale Price
+[11]
+df_house_train.boxplot(column=['SalePrice'])
+<AxesSubplot:>
+
+[12]
+sns.displot(df_house_train['SalePrice'], kde = False, color ='red', bins = 30)
+<seaborn.axisgrid.FacetGrid at 0x2278b3eda30>
+
+Results
+[13]
+print('The average house price is', "${:,.2f}".format(df_house_train['SalePrice'].mean()))
+The average house price is $181,654.94
+
+[14]
+ann_sales = df_house_train.groupby(['YrSold'])['SalePrice'].count().reset_index(
+  name='Count').sort_values(['Count'], ascending=False)
+print(ann_sales)
+   YrSold  Count
+3    2009    336
+1    2007    328
+0    2006    312
+2    2008    302
+4    2010    172
+
+Predictors
+Data Visualization
+[15]
+# plot a scatter plot price vs area
+plt.scatter(df_house_train['SalePrice'], df_house_train['LotArea'])
+# set axis lables
+plt.xlabel("Area (sqft)")
+plt.ylabel("Price ($)")
+# set chart title
+plt.title("Price vs Area")
+plt.show()
+
+Questions
+1. Which features of a home have the greatest positive impact on the home values?
+[16]
+print(top_11_corr)
+print("THE FEATURES THAT HAVE THE GREATEST POSITIVE IMPACT")
+Index(['SalePrice', 'OverallQual', 'GrLivArea', 'GarageCars', 'GarageArea',
+       'TotalBsmtSF', '1stFlrSF', 'FullBath', 'TotRmsAbvGrd', 'YearBuilt',
+       'YearRemodAdd'],
+      dtype='object')
+THE FEATURES THAT HAVE THE GREATEST POSITIVE IMPACT
+
+[18]
+sales_correlation_hm = sns.heatmap(cm[:1], annot=True, fmt='.2f', annot_kws={'size': 10}, yticklabels=top_11_corr[:1].values, xticklabels=top_11_corr.values)
+
+2. Which features of a home have the greatest negative impact on the home values?
+[83]
+corr = df_house_train.corr()["SalePrice"]
+negative_correlation = corr[corr < 0]
+print("Features of a home that have the greatest negative impact")
+print(negative_correlation[:11])
+Features of a home that have the greatest negative impact
+Id              -0.024353
+MSSubClass      -0.087487
+OverallCond     -0.089084
+BsmtFinSF2      -0.014145
+LowQualFinSF    -0.018755
+BsmtHalfBath    -0.017561
+KitchenAbvGr    -0.137825
+EnclosedPorch   -0.120765
+MiscVal         -0.021052
+YrSold          -0.025391
+MSZoning_RH     -0.066857
+Name: SalePrice, dtype: float64
+
+3. Which features could be discarded, saving on building costs?
+[20]
+threshold = 0.1
+corr = df_house_train.corr()['SalePrice']
+lower_correlation = corr[abs(corr) < threshold]
+print("The features could be discarded". format(threshold))
+print(lower_correlation.index.tolist())
+The features could be discarded
+['Id', 'MSSubClass', 'OverallCond', 'BsmtFinSF2', 'LowQualFinSF', 'BsmtHalfBath', '3SsnPorch', 'PoolArea', 'MiscVal', 'MoSold', 'YrSold']
+
+4. How much percentage resale value would an additional unit add to your home? 1 sqft, 1 room , …
+[21]
+data = df_house_train
+x = data[["GrLivArea", "LotArea", "GarageArea", "OverallQual"]]
+y = data["SalePrice"]
+[22]
+data["Additional Unit"] = 1
+[23]
+x_additional = data[["GrLivArea", "LotArea", "GarageArea", "OverallQual", "Additional Unit"]]
+[24]
+coef = np.linalg.inv(x_additional.transpose().dot(x_additional)).dot(x_additional.transpose()).dot(y)
+[25]
+y_prediction = x.dot(coef[:-1])+coef[-1]
+y_additional = x_additional.dot(coef)
+[26]
+percentage_resalevalue = (y_additional - y_prediction / y_prediction) * 100
+
+print("THE ADDED PERCENTAGE RESALE VALUE:", percentage_resalevalue.values[0])
+THE ADDED PERCENTAGE RESALE VALUE: 21917355.45983853
+
+5. What feature formula predicts housing prices most accurately?
+Linear Regression
+[27]
+df_house_train = pd.get_dummies(df_house_train)
+
+print(df_house_train.isnull().sum())
+
+df_house_train = df_house_train.fillna(df_house_train.mean())
+Id                         0
+MSSubClass                 0
+LotFrontage              259
+LotArea                    0
+OverallQual                0
+                        ... 
+SaleCondition_AdjLand      0
+SaleCondition_Alloca       0
+SaleCondition_Family       0
+SaleCondition_Normal       0
+SaleCondition_Partial      0
+Length: 290, dtype: int64
+
+[78]
+structure = LinearRegression()
+[79]
+structure.fit(X, y)
+LinearRegression()
+[80]
+y_pred = structure.predict(X)
+[81]
+r2 = r2_score(y, y_pred)
+print('R-squared:', r2)
+R-squared: 0.7904510673637483
+
+[82]
+plt.scatter(y_pred, y)
+plt.xlabel('Predicted prices')
+plt.ylabel('Actual prices')
+plt.title('Predicted vs. actual housing prices')
+plt.show()
+
+[87]
+Positive_FEATURES = ['OverallQual', 'GrLivArea', 'GarageCars', 'GarageArea', 'TotalBsmtSF', '1stFlrSF', 'FullBath', 'TotRmsAbvGrd', 'YearBuilt', 'YearRemodAdd']
+
+
+fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(20, 8))
+axs = axs.flatten()
+
+for i, ax in enumerate(axs):
+    sb.scatterplot(x=df_house_train[Positive_FEATURES[i]], y=df_house_train['SalePrice'], ax=ax)
+    ax.set_title('{} / Sale Price'.format(Positive_FEATURES[i]), fontsize=16)
+    ax.set_xlabel('{}'.format(Positive_FEATURES[i]), fontsize=14)
+    ax.set_ylabel('Sale Price', fontsize=14)
+    ax.tick_params(labelsize=12)
+
+
+
+plt.tight_layout()
+plt.savefig('scatter.png')
+plt.show()
+
+[86]
+
+Negetive_FEATURES = ['MSSubClass', 'OverallCond', 'BsmtFinSF2', 'LowQualFinSF', 'BsmtHalfBath', 'KitchenAbvGr', 'EnclosedPorch', 'MiscVal', 'YrSold', 'MSZoning_RH', ]
+
+
+fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(20, 8))
+axs = axs.flatten()
+
+for i, ax in enumerate(axs):
+    sb.scatterplot(x=df_house_train[Negetive_FEATURES[i]], y=df_house_train['SalePrice'], ax=ax)
+    ax.set_title('{} / Sale Price'.format(Negetive_FEATURES[i]), fontsize=16)
+    ax.set_xlabel('{}'.format(Negetive_FEATURES[i]), fontsize=14)
+    ax.set_ylabel('Sale Price', fontsize=14)
+    ax.tick_params(labelsize=12)
+
+
+
+plt.tight_layout()
+plt.savefig('scatter.png')
+plt.show()
+
 
