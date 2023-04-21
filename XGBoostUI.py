@@ -5,6 +5,8 @@ from tkinter import messagebox
 
 # Example Input
 # 1450: 5, 896, 1, 730, 882, 896, 1, 5, 1961, 1961
+# 2889:	7, 2000, 3, 650, 996, 996, 2, 9, 1993, 1994
+
 # Load the Linear Regression model from the file
 with open('xgboost_model.pkl', 'rb') as file:
     model = pickle.load(file)
@@ -13,7 +15,7 @@ with open('xgboost_model.pkl', 'rb') as file:
 window = tk.Tk()
 
 # Create input fields
-tk.Label(window, text="Overall Quality (1-5)").grid(row=0)
+tk.Label(window, text="Overall Quality (1-10)").grid(row=0)
 overall_qual_entry = tk.Entry(window)
 overall_qual_entry.grid(row=0, column=1)
 
