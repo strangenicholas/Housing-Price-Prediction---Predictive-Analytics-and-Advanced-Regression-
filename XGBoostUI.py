@@ -14,6 +14,9 @@ with open('xgboost_model.pkl', 'rb') as file:
 # Create window
 window = tk.Tk()
 
+# Title of the window
+window.title("Real Value Assessment")
+
 # Create input fields
 tk.Label(window, text="Overall Quality (1-10)").grid(row=0)
 overall_qual_entry = tk.Entry(window)
